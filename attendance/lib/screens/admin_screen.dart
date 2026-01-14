@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/leave_provider.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 
@@ -48,12 +47,12 @@ class _AdminScreenState extends State<AdminScreen> {
   Future<void> _updateUserRole(User user, UserRole newRole) async {
     try {
       final authProvider = context.read<AuthProvider>();
-      final apiService = ApiService();
-      await apiService.updateUserRole(authProvider.token!, user.id, newRole);
+      final apiService = ApiService(authToken: authProvider.token);
+      await apiService.updateUserRole(user.id, newRole);
       _fetchUsers(); // Refresh the list
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Role updated successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Role updated successfully')),
+      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,

@@ -1,8 +1,30 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/leave_request.dart';
 import '../models/user.dart';
+
+class LeaveStats {
+  final int total;
+  final int pending;
+  final int approved;
+  final int rejected;
+
+  LeaveStats({
+    required this.total,
+    required this.pending,
+    required this.approved,
+    required this.rejected,
+  });
+
+  factory LeaveStats.fromJson(Map<String, dynamic> json) {
+    return LeaveStats(
+      total: json['total'] ?? 0,
+      pending: json['pending'] ?? 0,
+      approved: json['approved'] ?? 0,
+      rejected: json['rejected'] ?? 0,
+    );
+  }
+}
 
 class ApiService {
   static const String baseUrl = 'http://localhost:8000';
@@ -47,6 +69,20 @@ class ApiService {
     }
   }
 
+  Future<LeaveStats> getLeaveStats() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/leave/stats'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return LeaveStats.fromJson(data);
+    } else {
+      throw Exception('Failed to fetch leave stats: ${response.body}');
+    }
+  }
+
   Future<List<LeaveRequest>> getPendingLeaves() async {
     final response = await http.get(
       Uri.parse('$baseUrl/leave/pending'),
@@ -72,6 +108,35 @@ class ApiService {
       return data.map((e) => LeaveRequest.fromJson(e)).toList();
     } else {
       throw Exception('Failed to fetch your leaves: ${response.body}');
+    }
+  }
+
+  Future<List<LeaveRequest>> getLeaveHistory({
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final params = <String>[];
+    if (status != null) params.add('status=$status');
+    if (startDate != null) {
+      params.add('start_date=${startDate.toIso8601String().split('T')[0]}');
+    }
+    if (endDate != null) {
+      params.add('end_date=${endDate.toIso8601String().split('T')[0]}');
+    }
+    params.add('page=$page');
+    params.add('page_size=$pageSize');
+
+    final url = '$baseUrl/leave/history?${params.join('&')}';
+    final response = await http.get(Uri.parse(url), headers: headers);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => LeaveRequest.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to fetch leave history: ${response.body}');
     }
   }
 
@@ -110,6 +175,35 @@ class ApiService {
       return LeaveRequest.fromJson(data['leave_request']);
     } else {
       throw Exception('Failed to $action leave: ${response.body}');
+    }
+  }
+
+  Future<bool> batchLeaveAction({
+    required List<int> leaveIds,
+    required String action,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/leave/batch/action'),
+      headers: headers,
+      body: jsonEncode({'leave_ids': leaveIds, 'action': action}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['success'] ?? false;
+    } else {
+      throw Exception('Failed to batch $action leaves: ${response.body}');
+    }
+  }
+
+  Future<void> cancelLeave(int leaveId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/leave/$leaveId'),
+      headers: headers,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to cancel leave: ${response.body}');
     }
   }
 

@@ -3,6 +3,41 @@ from datetime import date, datetime
 from typing import Optional, List
 
 
+# ============== Leave Statistics Schema ==============
+
+class LeaveStats(BaseModel):
+    """Leave statistics"""
+    total: int
+    pending: int
+    approved: int
+    rejected: int
+
+
+# ============== Batch Action Schemas ==============
+
+class BatchActionRequest(BaseModel):
+    """Request for batch approve/reject"""
+    leave_ids: List[int] = Field(..., description="List of leave IDs to process")
+    action: str = Field(..., pattern="^(APPROVE|REJECT)$", description="Action to take")
+
+
+class FailedLeave(BaseModel):
+    """Failed leave in batch operation"""
+    id: int
+    error: str
+
+
+class BatchActionResponse(BaseModel):
+    """Response after batch action"""
+    success: bool
+    message: str
+    action: str
+    processed_ids: List[int]
+    failed_ids: List[FailedLeave]
+    total_count: int
+    success_count: int
+
+
 # ============== User Schemas ==============
 
 class UserBase(BaseModel):

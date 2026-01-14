@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/leave_provider.dart';
-import '../models/leave_request.dart';
 
 class LeaveApplicationScreen extends StatefulWidget {
   const LeaveApplicationScreen({super.key});

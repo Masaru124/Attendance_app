@@ -12,18 +12,74 @@ class LeaveHistoryScreen extends StatefulWidget {
 }
 
 class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
+  String _selectedFilter = 'ALL';
+  final List<String> _filterOptions = [
+    'ALL',
+    'PENDING',
+    'APPROVED',
+    'REJECTED',
+  ];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLeaves();
+      _fetchStats();
     });
   }
 
   Future<void> _fetchLeaves() async {
     final authProvider = context.read<AuthProvider>();
     final leaveProvider = context.read<LeaveProvider>();
-    await leaveProvider.fetchMyLeaves(authProvider.token!);
+
+    String? status = _selectedFilter == 'ALL' ? null : _selectedFilter;
+    await leaveProvider.fetchLeaveHistory(
+      token: authProvider.token!,
+      status: status,
+    );
+  }
+
+  Future<void> _fetchStats() async {
+    final authProvider = context.read<AuthProvider>();
+    final leaveProvider = context.read<LeaveProvider>();
+    await leaveProvider.fetchLeaveStats(authProvider.token!);
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Filter by Status',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ..._filterOptions.map(
+              (filter) => ListTile(
+                title: Text(filter),
+                leading: Radio<String>(
+                  value: filter,
+                  groupValue: _selectedFilter,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedFilter = value!;
+                    });
+                    Navigator.pop(context);
+                    _fetchLeaves();
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -36,55 +92,176 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchLeaves),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showFilterSheet,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _fetchLeaves();
+              _fetchStats();
+            },
+          ),
         ],
       ),
-      body: leaveProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : leaveProvider.error != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Error: ${leaveProvider.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _fetchLeaves,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            )
-          : leaveProvider.myLeaves.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.event_busy, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No leave applications yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Apply for your first leave!',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _fetchLeaves,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: leaveProvider.myLeaves.length,
-                itemBuilder: (context, index) {
-                  final leave = leaveProvider.myLeaves[index];
-                  return LeaveHistoryCard(leave: leave);
-                },
-              ),
+      body: Column(
+        children: [
+          // Statistics Card
+          if (leaveProvider.stats != null)
+            _buildStatsCard(leaveProvider.stats!),
+          const SizedBox(height: 8),
+          // Filter chip
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                const Text(
+                  'Filter: ',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                Chip(
+                  label: Text(_selectedFilter),
+                  backgroundColor: Colors.deepPurple[100],
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: _selectedFilter == 'ALL'
+                      ? null
+                      : () {
+                          setState(() {
+                            _selectedFilter = 'ALL';
+                          });
+                          _fetchLeaves();
+                        },
+                ),
+              ],
             ),
+          ),
+          // Leave list
+          Expanded(
+            child: leaveProvider.isLoading && leaveProvider.myLeaves.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : leaveProvider.error != null && leaveProvider.myLeaves.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Error: ${leaveProvider.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            _fetchLeaves();
+                            _fetchStats();
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : leaveProvider.myLeaves.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.event_busy,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No leave applications found',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Try a different filter or apply for leave!',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      await _fetchLeaves();
+                      await _fetchStats();
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: leaveProvider.myLeaves.length,
+                      itemBuilder: (context, index) {
+                        final leave = leaveProvider.myLeaves[index];
+                        return LeaveHistoryCard(leave: leave);
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCard(LeaveStatsData stats) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Leave Statistics',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem(
+                  label: 'Total',
+                  value: stats.total.toString(),
+                  color: Colors.deepPurple,
+                ),
+                _buildStatItem(
+                  label: 'Pending',
+                  value: stats.pending.toString(),
+                  color: Colors.orange,
+                ),
+                _buildStatItem(
+                  label: 'Approved',
+                  value: stats.approved.toString(),
+                  color: Colors.green,
+                ),
+                _buildStatItem(
+                  label: 'Rejected',
+                  value: stats.rejected.toString(),
+                  color: Colors.red,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
     );
   }
 }
@@ -170,6 +347,13 @@ class LeaveHistoryCard extends StatelessWidget {
                   color: leave.statusColor,
                   fontWeight: FontWeight.w500,
                 ),
+              ),
+            ],
+            if (leave.reviewedAt != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Reviewed: ${leave.reviewedAt!.day}/${leave.reviewedAt!.month}/${leave.reviewedAt!.year}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ],
           ],
