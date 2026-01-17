@@ -1,38 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/leave_provider.dart';
 import '../models/leave_request.dart';
 
-class LeaveApprovalScreen extends StatefulWidget {
+class LeaveApprovalScreen extends ConsumerStatefulWidget {
   const LeaveApprovalScreen({super.key});
 
   @override
-  State<LeaveApprovalScreen> createState() => _LeaveApprovalScreenState();
+  ConsumerState<LeaveApprovalScreen> createState() =>
+      _LeaveApprovalScreenState();
 }
 
-class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
+class _LeaveApprovalScreenState extends ConsumerState<LeaveApprovalScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchPendingLeaves();
+    // Schedule fetch after the first frame is built to avoid setState() during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchPendingLeaves();
+    });
   }
 
   Future<void> _fetchPendingLeaves() async {
-    final authProvider = context.read<AuthProvider>();
-    final leaveProvider = context.read<LeaveProvider>();
-    await leaveProvider.fetchPendingLeaves(authProvider.token!);
+    if (!mounted) return;
+    final leaveProvider = ref.read(leaveProviderProvider);
+    await leaveProvider.fetchPendingLeaves();
   }
 
   Future<void> _approveLeave(int leaveId) async {
-    final leaveProvider = context.read<LeaveProvider>();
-    final authProvider = context.read<AuthProvider>();
+    final leaveProvider = ref.read(leaveProviderProvider);
 
     try {
-      await leaveProvider.approveLeave(
-        token: authProvider.token!,
-        leaveId: leaveId,
-      );
+      await leaveProvider.approveLeave(leaveId: leaveId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -52,14 +51,10 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
   }
 
   Future<void> _rejectLeave(int leaveId) async {
-    final leaveProvider = context.read<LeaveProvider>();
-    final authProvider = context.read<AuthProvider>();
+    final leaveProvider = ref.read(leaveProviderProvider);
 
     try {
-      await leaveProvider.rejectLeave(
-        token: authProvider.token!,
-        leaveId: leaveId,
-      );
+      await leaveProvider.rejectLeave(leaveId: leaveId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,7 +104,7 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final leaveProvider = context.watch<LeaveProvider>();
+    final leaveProvider = ref.watch(leaveProviderProvider);
 
     return Scaffold(
       appBar: AppBar(

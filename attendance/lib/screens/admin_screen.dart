@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 
-class AdminScreen extends StatefulWidget {
+class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
 
   @override
-  State<AdminScreen> createState() => _AdminScreenState();
+  ConsumerState<AdminScreen> createState() => _AdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> {
+class _AdminScreenState extends ConsumerState<AdminScreen> {
   List<User> _users = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -19,18 +19,22 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUsers();
+    // Schedule fetch after the first frame is built to avoid setState() during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchUsers();
+    });
   }
 
   Future<void> _fetchUsers() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final authProvider = context.read<AuthProvider>();
-      final apiService = ApiService(authToken: authProvider.token);
+      final authProvider = ref.read(authProviderProvider);
+      final apiService = ApiService(authProvider: authProvider);
       final users = await apiService.getUsers();
       setState(() {
         _users = users;
@@ -46,8 +50,8 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _updateUserRole(User user, UserRole newRole) async {
     try {
-      final authProvider = context.read<AuthProvider>();
-      final apiService = ApiService(authToken: authProvider.token);
+      final authProvider = ref.read(authProviderProvider);
+      final apiService = ApiService(authProvider: authProvider);
       await apiService.updateUserRole(user.id, newRole);
       _fetchUsers(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(

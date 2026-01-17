@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/leave_provider.dart';
 import '../models/leave_request.dart';
 
-class LeaveHistoryScreen extends StatefulWidget {
+class LeaveHistoryScreen extends ConsumerStatefulWidget {
   const LeaveHistoryScreen({super.key});
 
   @override
-  State<LeaveHistoryScreen> createState() => _LeaveHistoryScreenState();
+  ConsumerState<LeaveHistoryScreen> createState() => _LeaveHistoryScreenState();
 }
 
-class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
+class _LeaveHistoryScreenState extends ConsumerState<LeaveHistoryScreen> {
   String _selectedFilter = 'ALL';
   final List<String> _filterOptions = [
     'ALL',
@@ -19,6 +18,8 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
     'APPROVED',
     'REJECTED',
   ];
+
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -29,21 +30,37 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Always refresh data when the screen becomes visible
+    // This ensures we get the latest status from the server
+    _fetchLeaves();
+    _fetchStats();
+  }
+
   Future<void> _fetchLeaves() async {
-    final authProvider = context.read<AuthProvider>();
-    final leaveProvider = context.read<LeaveProvider>();
+    if (_isRefreshing) return;
+
+    final leaveProvider = ref.read(leaveProviderProvider);
+    _isRefreshing = true;
 
     String? status = _selectedFilter == 'ALL' ? null : _selectedFilter;
-    await leaveProvider.fetchLeaveHistory(
-      token: authProvider.token!,
-      status: status,
-    );
+
+    try {
+      await leaveProvider.fetchLeaveHistory(status: status);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   Future<void> _fetchStats() async {
-    final authProvider = context.read<AuthProvider>();
-    final leaveProvider = context.read<LeaveProvider>();
-    await leaveProvider.fetchLeaveStats(authProvider.token!);
+    final leaveProvider = ref.read(leaveProviderProvider);
+    await leaveProvider.fetchLeaveStats();
   }
 
   void _showFilterSheet() {
@@ -84,7 +101,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final leaveProvider = context.watch<LeaveProvider>();
+    final leaveProvider = ref.watch(leaveProviderProvider);
 
     return Scaffold(
       appBar: AppBar(

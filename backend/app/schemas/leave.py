@@ -3,32 +3,26 @@ from datetime import date, datetime
 from typing import Optional, List
 
 
-# ============== Leave Statistics Schema ==============
 
 class LeaveStats(BaseModel):
-    """Leave statistics"""
     total: int
     pending: int
     approved: int
     rejected: int
 
 
-# ============== Batch Action Schemas ==============
 
 class BatchActionRequest(BaseModel):
-    """Request for batch approve/reject"""
     leave_ids: List[int] = Field(..., description="List of leave IDs to process")
     action: str = Field(..., pattern="^(APPROVE|REJECT)$", description="Action to take")
 
 
 class FailedLeave(BaseModel):
-    """Failed leave in batch operation"""
     id: int
     error: str
 
 
 class BatchActionResponse(BaseModel):
-    """Response after batch action"""
     success: bool
     message: str
     action: str
@@ -38,7 +32,6 @@ class BatchActionResponse(BaseModel):
     success_count: int
 
 
-# ============== User Schemas ==============
 
 class UserBase(BaseModel):
     email: str
@@ -60,7 +53,6 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
-# ============== Leave Request Schemas ==============
 
 class LeaveRequestCreate(BaseModel):
     """Schema for creating a leave request"""
@@ -70,7 +62,6 @@ class LeaveRequestCreate(BaseModel):
 
 
 class LeaveRequestResponse(BaseModel):
-    """Schema for leave request response"""
     id: int
     student_id: int
     student_name: Optional[str] = None
@@ -88,33 +79,27 @@ class LeaveRequestResponse(BaseModel):
 
 
 class LeaveRequestDetail(LeaveRequestResponse):
-    """Detailed leave request with user info"""
     student: Optional[UserResponse] = None
     reviewer: Optional[UserResponse] = None
 
 
 class LeaveActionRequest(BaseModel):
-    """Schema for approve/reject action"""
     action: str = Field(..., pattern="^(APPROVE|REJECT)$", description="Action to take")
 
 
 class LeaveActionResponse(BaseModel):
-    """Response after leave action"""
     success: bool
     message: str
     leave_request: LeaveRequestResponse
 
 
-# ============== FCM Token Schemas ==============
 
 class FCMTokenCreate(BaseModel):
-    """Schema for saving FCM token"""
     token: str = Field(..., description="Firebase Cloud Messaging token")
     device_type: str = Field(default="android", description="Device type")
 
 
 class FCMTokenResponse(BaseModel):
-    """FCM token response"""
     id: int
     user_id: int
     token: str
@@ -125,17 +110,14 @@ class FCMTokenResponse(BaseModel):
         from_attributes = True
 
 
-# ============== API Response Schemas ==============
 
 class APIResponse(BaseModel):
-    """Generic API response"""
     success: bool
     message: str
     data: Optional[dict] = None
 
 
 class LeaveStats(BaseModel):
-    """Leave statistics"""
     total: int
     pending: int
     approved: int

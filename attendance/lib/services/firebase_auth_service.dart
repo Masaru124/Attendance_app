@@ -111,6 +111,69 @@ class FirebaseAuthService {
     await _auth.signOut();
   }
 
+  /// Get the current Firebase ID token for API authentication
+  /// This token is required for backend verification
+  Future<String?> getIdToken() async {
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser == null) {
+        print('getIdToken: _auth.currentUser is null');
+        return null;
+      }
+
+      print('getIdToken: Firebase user found: ${firebaseUser.uid}');
+      print('getIdToken: Email: ${firebaseUser.email}');
+      print('getIdToken: Is anonymous: ${firebaseUser.isAnonymous}');
+
+      // Force refresh to get a fresh token if needed
+      // Tokens expire after 1 hour
+      if (_auth.currentUser == null) {
+        print('getIdToken: _auth.currentUser became null');
+        return null;
+      }
+
+      // Get the ID token (this may trigger a refresh if expired)
+      String? token = await firebaseUser.getIdToken();
+      print('getIdToken: Token obtained, length: ${token?.length ?? 0}');
+      return token;
+    } catch (e, stackTrace) {
+      print('Error getting ID token: $e');
+      print('Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Force refresh the ID token and return the new one
+  Future<String?> forceRefreshToken() async {
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser == null) {
+        print('forceRefreshToken: No current user found');
+        return null;
+      }
+
+      print('forceRefreshToken: Current user UID: ${firebaseUser.uid}');
+
+      // Force token refresh - getIdToken(true) forces a refresh
+      String? newToken = await firebaseUser.getIdToken(true);
+
+      if (newToken == null) {
+        print('forceRefreshToken: getIdToken(true) returned null');
+        // Try getting token without force refresh as fallback
+        newToken = await firebaseUser.getIdToken();
+      }
+
+      print(
+        'forceRefreshToken: Successfully refreshed token, length: ${newToken?.length ?? 0}',
+      );
+      return newToken;
+    } catch (e, stackTrace) {
+      print('Error refreshing token: $e');
+      print('Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);

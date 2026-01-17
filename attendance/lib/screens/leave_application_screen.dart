@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/leave_provider.dart';
+import '../providers/home_tab_controller.dart';
 
-class LeaveApplicationScreen extends StatefulWidget {
+class LeaveApplicationScreen extends ConsumerStatefulWidget {
   const LeaveApplicationScreen({super.key});
 
   @override
-  State<LeaveApplicationScreen> createState() => _LeaveApplicationScreenState();
+  ConsumerState<LeaveApplicationScreen> createState() =>
+      _LeaveApplicationScreenState();
 }
 
-class _LeaveApplicationScreenState extends State<LeaveApplicationScreen> {
+class _LeaveApplicationScreenState
+    extends ConsumerState<LeaveApplicationScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _reasonController = TextEditingController();
 
@@ -55,11 +57,9 @@ class _LeaveApplicationScreenState extends State<LeaveApplicationScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final authProvider = context.read<AuthProvider>();
-      final leaveProvider = context.read<LeaveProvider>();
+      final leaveProvider = ref.read(leaveProviderProvider);
 
       await leaveProvider.applyLeave(
-        token: authProvider.token!,
         fromDate: _fromDate,
         toDate: _toDate,
         reason: _reasonController.text,
@@ -72,7 +72,7 @@ class _LeaveApplicationScreenState extends State<LeaveApplicationScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
+        ref.read(homeTabControllerProvider).goToDashboard();
       }
     } catch (e) {
       if (mounted) {

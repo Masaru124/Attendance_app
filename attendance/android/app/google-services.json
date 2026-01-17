@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:673980557259:android:38e360ae98711c7095f84e",
         "android_client_info": {
-          "package_name": "com.example.myapplication"
+          "package_name": "com.example.attendance"
         }
       },
       "oauth_client": [
@@ -18,7 +18,7 @@
           "client_id": "673980557259-i2ms7bctja0oranei5jns9nvi91e9h58.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.myapplication",
+            "package_name": "com.example.attendance",
             "certificate_hash": "afb1028a547c1d496a608c49ebe5ead2fdc098e4"
           }
         }

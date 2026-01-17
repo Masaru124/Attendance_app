@@ -60,12 +60,21 @@ class LeaveRequest {
   }
 
   static LeaveStatus _parseStatus(String? status) {
-    switch (status?.toUpperCase()) {
+    final normalizedStatus = status?.toUpperCase().trim();
+    print(
+      '_parseStatus: Raw status = "$status", normalized = "$normalizedStatus"',
+    );
+    switch (normalizedStatus) {
       case 'APPROVED':
+      case 'APPROVE':
+        print('_parseStatus: Parsed as APPROVED');
         return LeaveStatus.approved;
       case 'REJECTED':
+      case 'REJECT':
+        print('_parseStatus: Parsed as REJECTED');
         return LeaveStatus.rejected;
       default:
+        print('_parseStatus: Defaulting to PENDING');
         return LeaveStatus.pending;
     }
   }

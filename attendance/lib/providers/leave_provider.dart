@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/leave_request.dart';
 import '../services/api_service.dart';
+import '../providers/auth_provider.dart';
 
 class LeaveStatsData {
   final int total;
@@ -25,7 +27,7 @@ class LeaveStatsData {
   }
 }
 
-class LeaveProvider with ChangeNotifier {
+class LeaveProvider extends ChangeNotifier {
   List<LeaveRequest> _pendingLeaves = [];
   List<LeaveRequest> _myLeaves = [];
   LeaveStatsData? _stats;
@@ -38,17 +40,19 @@ class LeaveProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  final ApiService apiService;
+  final AuthProvider? authProvider;
 
-  LeaveProvider({required this.apiService});
+  LeaveProvider({this.authProvider});
 
-  Future<void> fetchPendingLeaves(String token) async {
+  Future<void> fetchPendingLeaves() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    await Future.microtask(() {});
 
     try {
-      _pendingLeaves = await ApiService(authToken: token).getPendingLeaves();
+      _pendingLeaves = await ApiService(
+        authProvider: authProvider,
+      ).getPendingLeaves();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -57,13 +61,13 @@ class LeaveProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchMyLeaves(String token) async {
+  Future<void> fetchMyLeaves() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    await Future.microtask(() {});
 
     try {
-      _myLeaves = await ApiService(authToken: token).getMyLeaves();
+      _myLeaves = await ApiService(authProvider: authProvider).getMyLeaves();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -72,9 +76,11 @@ class LeaveProvider with ChangeNotifier {
     }
   }
 
-  Future<LeaveStatsData> fetchLeaveStats(String token) async {
+  Future<LeaveStatsData> fetchLeaveStats() async {
     try {
-      final stats = await ApiService(authToken: token).getLeaveStats();
+      final stats = await ApiService(
+        authProvider: authProvider,
+      ).getLeaveStats();
       _stats = LeaveStatsData(
         total: stats.total,
         pending: stats.pending,
@@ -90,7 +96,6 @@ class LeaveProvider with ChangeNotifier {
   }
 
   Future<List<LeaveRequest>> fetchLeaveHistory({
-    required String token,
     String? status,
     DateTime? startDate,
     DateTime? endDate,
@@ -98,15 +103,16 @@ class LeaveProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    await Future.microtask(() {});
 
     try {
-      final leaves = await ApiService(authToken: token).getLeaveHistory(
-        status: status,
-        startDate: startDate,
-        endDate: endDate,
-        page: page,
-      );
+      final leaves = await ApiService(authProvider: authProvider)
+          .getLeaveHistory(
+            status: status,
+            startDate: startDate,
+            endDate: endDate,
+            page: page,
+          );
       _myLeaves = leaves;
       _isLoading = false;
       notifyListeners();
@@ -120,18 +126,17 @@ class LeaveProvider with ChangeNotifier {
   }
 
   Future<LeaveRequest> applyLeave({
-    required String token,
     required DateTime fromDate,
     required DateTime toDate,
     required String reason,
   }) async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    await Future.microtask(() {});
 
     try {
       final leaves = await ApiService(
-        authToken: token,
+        authProvider: authProvider,
       ).applyLeave(fromDate: fromDate, toDate: toDate, reason: reason);
 
       // Add to my leaves list
@@ -150,20 +155,21 @@ class LeaveProvider with ChangeNotifier {
     }
   }
 
-  Future<LeaveRequest> approveLeave({
-    required String token,
-    required int leaveId,
-  }) async {
+  Future<LeaveRequest> approveLeave({required int leaveId}) async {
     try {
       final updatedLeave = await ApiService(
-        authToken: token,
+        authProvider: authProvider,
       ).approveLeave(leaveId);
 
-      // Remove from pending list
       _pendingLeaves.removeWhere((leave) => leave.id == leaveId);
 
-      // Add to my leaves if this is the current user's leave
+      _myLeaves.removeWhere((leave) => leave.id == leaveId);
+
       _myLeaves.insert(0, updatedLeave);
+
+      await fetchLeaveStats();
+
+      await fetchMyLeaves();
 
       notifyListeners();
       return updatedLeave;
@@ -174,20 +180,21 @@ class LeaveProvider with ChangeNotifier {
     }
   }
 
-  Future<LeaveRequest> rejectLeave({
-    required String token,
-    required int leaveId,
-  }) async {
+  Future<LeaveRequest> rejectLeave({required int leaveId}) async {
     try {
       final updatedLeave = await ApiService(
-        authToken: token,
+        authProvider: authProvider,
       ).rejectLeave(leaveId);
 
-      // Remove from pending list
       _pendingLeaves.removeWhere((leave) => leave.id == leaveId);
 
-      // Add to my leaves if this is the current user's leave
+      _myLeaves.removeWhere((leave) => leave.id == leaveId);
+
       _myLeaves.insert(0, updatedLeave);
+
+      await fetchLeaveStats();
+
+      await fetchMyLeaves();
 
       notifyListeners();
       return updatedLeave;
@@ -199,22 +206,24 @@ class LeaveProvider with ChangeNotifier {
   }
 
   Future<bool> batchLeaveAction({
-    required String token,
     required List<int> leaveIds,
     required String action,
   }) async {
     _isLoading = true;
-    notifyListeners();
+    await Future.microtask(() {});
 
     try {
       final success = await ApiService(
-        authToken: token,
+        authProvider: authProvider,
       ).batchLeaveAction(leaveIds: leaveIds, action: action);
 
-      // Remove processed leaves from pending list
       for (var id in leaveIds) {
         _pendingLeaves.removeWhere((leave) => leave.id == id);
       }
+
+      await fetchMyLeaves();
+
+      await fetchLeaveStats();
 
       _isLoading = false;
       notifyListeners();
@@ -227,14 +236,10 @@ class LeaveProvider with ChangeNotifier {
     }
   }
 
-  Future<void> cancelLeave({
-    required String token,
-    required int leaveId,
-  }) async {
+  Future<void> cancelLeave({required int leaveId}) async {
     try {
-      await ApiService(authToken: token).cancelLeave(leaveId);
+      await ApiService(authProvider: authProvider).cancelLeave(leaveId);
 
-      // Remove from my leaves list
       _myLeaves.removeWhere((leave) => leave.id == leaveId);
 
       notifyListeners();
@@ -257,3 +262,8 @@ class LeaveProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+
+final leaveProviderProvider = ChangeNotifierProvider<LeaveProvider>((ref) {
+  final authProvider = ref.watch(authProviderProvider);
+  return LeaveProvider(authProvider: authProvider);
+});

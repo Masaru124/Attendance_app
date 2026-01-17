@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final authProvider = context.read<AuthProvider>();
+      final authProvider = ref.read(authProviderProvider);
       await authProvider.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
@@ -67,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final authProvider = context.read<AuthProvider>();
+      final authProvider = ref.read(authProviderProvider);
       await authProvider.signInWithGoogle();
 
       if (mounted) {

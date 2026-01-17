@@ -1,8 +1,15 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.leave import router as leave_router
 from app.api.notification import router as notification_router
 from app.api.users import router as users_router
+from app.api.attendance import router as attendance_router
+from app.db.models import User, LeaveRequest, FCMToken, AttendanceSession, AttendanceRecord
+
+import firebase_admin
+from firebase_admin import credentials, auth
+from fastapi import Header, HTTPException
 
 app = FastAPI(
     title="Smart Attendance System",
@@ -11,22 +18,33 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(health_router)
 app.include_router(leave_router)
 app.include_router(notification_router)
 app.include_router(users_router)
+app.include_router(attendance_router)
 
 @app.get("/")
 def root():
     return {"message": "Smart Attendance Backend Running"}
 
 
-# Import database models to ensure they're registered with Base
-from app.db.models import User, LeaveRequest, FCMToken
+@app.on_event("startup")
+def startup_event():
+    from app.db.database import init_db
+    init_db()
+    print("Database tables created successfully!")
 
-import firebase_admin
-from firebase_admin import credentials, auth
-from fastapi import Header, HTTPException
+
+
 
 try:
     cred = credentials.Certificate("firebase_key.json")

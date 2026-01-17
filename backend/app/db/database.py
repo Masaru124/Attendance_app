@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 from app.db.base import Base
 
 # Create database engine
@@ -15,14 +15,17 @@ SessionLocal = sessionmaker(
     bind=engine
 )
 
-# Create tables
-Base.metadata.create_all(bind=engine)
 
-def get_db() -> Session:
+def get_db():
     """Dependency to get database session"""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+def init_db():
+    """Initialize database tables"""
+    Base.metadata.create_all(bind=engine)
 
