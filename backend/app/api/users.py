@@ -35,19 +35,30 @@ async def get_current_user_profile(
 ):
  
     firebase_uid = current_user.get("uid", "")
+    email = current_user.get("email", "")
     
     user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
     
     if not user:
-        user = User(
-            firebase_uid=firebase_uid,
-            email=current_user.get("email", ""),
-            name=current_user.get("name", "User"),
-            role="STUDENT"
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        # Check if user exists by email (in case they were created with different firebase_uid)
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            # Create new user only if doesn't exist by either firebase_uid or email
+            user = User(
+                firebase_uid=firebase_uid,
+                email=email,
+                name=current_user.get("name", "User"),
+                role="STUDENT"
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        else:
+            # Update existing user's firebase_uid if different
+            if user.firebase_uid != firebase_uid:
+                user.firebase_uid = firebase_uid
+                db.commit()
+                db.refresh(user)
     
     return user
 

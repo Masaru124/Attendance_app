@@ -30,7 +30,6 @@ class AuthProvider extends ChangeNotifier {
         _token = null;
         print('AuthStateChanges: User is null, cleared token');
       } else {
-        
         print('AuthStateChanges: User is not null, trying to get token...');
 
         await Future.delayed(const Duration(milliseconds: 500));
@@ -52,7 +51,6 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-
   Future<String?> getValidToken() async {
     try {
       final token = await _authService.getIdToken();
@@ -66,7 +64,6 @@ class AuthProvider extends ChangeNotifier {
       return null;
     }
   }
-
 
   Future<String?> refreshToken() async {
     try {
@@ -103,7 +100,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-
   Future<void> _syncUserRoleFromBackend() async {
     try {
       final apiService = ApiService(authProvider: this);
@@ -121,7 +117,6 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('Failed to sync user role from backend: $e');
-     
     }
   }
 
@@ -140,23 +135,6 @@ class AuthProvider extends ChangeNotifier {
       );
       _currentUser = user;
       _token = await _authService.getIdToken();
-    } catch (e) {
-      _errorMessage = e.toString();
-      rethrow;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  Future<void> signInWithGoogle() async {
-    setLoading(true);
-    _errorMessage = null;
-    try {
-      final user = await _authService.signInWithGoogle();
-      _currentUser = user;
-      _token = await _authService.getIdToken();
-
-      await _syncUserRoleFromBackend();
     } catch (e) {
       _errorMessage = e.toString();
       rethrow;

@@ -29,11 +29,12 @@ class LeaveStats {
 }
 
 class ApiService {
-  // Use localhost for emulator/simulator
-  // static const String baseUrl = 'http://localhost:8000';
-
-  // Use your computer's IP address for wireless debugging on physical device
-  static const String baseUrl = 'http://192.168.29.220:8000';
+  // Use a getter to ensure the URL is always properly formatted
+  static String get baseUrl {
+    const String baseUrl = 'http://192.168.29.194:8000';
+    // Trim any potential whitespace that might be introduced
+    return baseUrl.trim();
+  }
 
   final AuthProvider? authProvider;
 
@@ -41,7 +42,6 @@ class ApiService {
 
   Map<String, String> get headers {
     final headers = {'Content-Type': 'application/json'};
-    // Get the current token from AuthProvider
     final token = authProvider?.token;
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';
@@ -49,21 +49,17 @@ class ApiService {
     return headers;
   }
 
-  /// Get a fresh valid token before making API calls
-  /// Also updates the authProvider with the fresh token
   Future<String?> _getValidToken() async {
     if (authProvider == null) {
       print('_getValidToken: authProvider is null');
       return null;
     }
 
-    // First try to get current token
     String? token = authProvider!.token;
     print(
       '_getValidToken: Current token: ${token != null ? "exists (${token.substring(0, 20)}...)" : "NULL"}',
     );
 
-    // If no token or we want to ensure it's valid, get a fresh one
     if (token == null || token.isEmpty) {
       print('_getValidToken: Token is null/empty, calling getValidToken()...');
       token = await authProvider!.getValidToken();
@@ -75,14 +71,11 @@ class ApiService {
     return token;
   }
 
-  // ============== Leave APIs ==============
-
   Future<List<LeaveRequest>> applyLeave({
     required DateTime fromDate,
     required DateTime toDate,
     required String reason,
   }) async {
-    // Ensure we have a valid token
     await _getValidToken();
 
     final response = await http.post(
@@ -95,7 +88,6 @@ class ApiService {
       }),
     );
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
@@ -106,7 +98,6 @@ class ApiService {
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.post(
           Uri.parse('$baseUrl/leave/apply'),
           headers: freshHeaders,
@@ -137,7 +128,6 @@ class ApiService {
   }
 
   Future<LeaveStats> getLeaveStats() async {
-    // Ensure we have a valid token
     await _getValidToken();
 
     final response = await http.get(
@@ -145,18 +135,15 @@ class ApiService {
       headers: headers,
     );
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
 
       if (newToken != null) {
         print('Token refreshed successfully, retrying request...');
-        // Create fresh headers with the new token
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.get(
           Uri.parse('$baseUrl/leave/stats'),
           headers: freshHeaders,
@@ -182,10 +169,8 @@ class ApiService {
   }
 
   Future<List<LeaveRequest>> getPendingLeaves() async {
-    // Ensure we have a valid token and use it directly
     final token = await _getValidToken();
 
-    // Build headers with the fresh token
     final requestHeaders = <String, String>{'Content-Type': 'application/json'};
     if (token != null) {
       requestHeaders['Authorization'] = 'Bearer $token';
@@ -203,7 +188,6 @@ class ApiService {
 
     print('getPendingLeaves: Initial response status: ${response.statusCode}');
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
@@ -213,11 +197,9 @@ class ApiService {
         print(
           'New token preview: ${newToken.substring(0, math.min(20, newToken.length))}...',
         );
-        // Create fresh headers with the new token
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.get(
           Uri.parse('$baseUrl/leave/pending'),
           headers: freshHeaders,
@@ -250,7 +232,6 @@ class ApiService {
 
   Future<List<LeaveRequest>> getMyLeaves() async {
     print('getMyLeaves: Fetching from API...');
-    // Ensure we have a valid token
     await _getValidToken();
 
     final response = await http.get(
@@ -267,11 +248,9 @@ class ApiService {
 
       if (newToken != null) {
         print('Token refreshed successfully, retrying request...');
-        // Create fresh headers with the new token
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.get(
           Uri.parse('$baseUrl/leave/my'),
           headers: freshHeaders,
@@ -323,7 +302,6 @@ class ApiService {
     print('getLeaveHistory: Response status: ${response.statusCode}');
     print('getLeaveHistory: Response body: ${response.body}');
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
@@ -724,10 +702,7 @@ class ApiService {
     }
   }
 
-  // ============== Attendance APIs ==============
-
   Future<void> markAttendance({required String sessionId}) async {
-    // Ensure we have a valid token
     await _getValidToken();
 
     final response = await http.post(
@@ -736,18 +711,15 @@ class ApiService {
       body: jsonEncode({'session_id': sessionId}),
     );
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
 
       if (newToken != null) {
         print('Token refreshed successfully, retrying request...');
-        // Create fresh headers with the new token
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.post(
           Uri.parse('$baseUrl/attendance/mark'),
           headers: freshHeaders,
@@ -770,7 +742,6 @@ class ApiService {
   }
 
   Future<List<dynamic>> getMyAttendance() async {
-    // Ensure we have a valid token
     await _getValidToken();
 
     final response = await http.get(
@@ -778,18 +749,15 @@ class ApiService {
       headers: headers,
     );
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
 
       if (newToken != null) {
         print('Token refreshed successfully, retrying request...');
-        // Create fresh headers with the new token
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.get(
           Uri.parse('$baseUrl/attendance/my'),
           headers: freshHeaders,
@@ -815,7 +783,6 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSessionAttendance(String sessionId) async {
-    // Ensure we have a valid token
     await _getValidToken();
 
     final response = await http.get(
@@ -823,7 +790,6 @@ class ApiService {
       headers: headers,
     );
 
-    // If we get a 401, try refreshing the token and retry once
     if (response.statusCode == 401) {
       print('Received 401, refreshing token and retrying...');
       final newToken = await authProvider?.refreshToken();
@@ -834,7 +800,6 @@ class ApiService {
         final freshHeaders = {'Content-Type': 'application/json'};
         freshHeaders['Authorization'] = 'Bearer $newToken';
 
-        // Retry the request with fresh token
         final retryResponse = await http.get(
           Uri.parse('$baseUrl/attendance/session/$sessionId'),
           headers: freshHeaders,
@@ -858,8 +823,6 @@ class ApiService {
       throw Exception('Failed to fetch session attendance: ${response.body}');
     }
   }
-
-  // ============== Health Check ==============
 
   Future<bool> healthCheck() async {
     try {

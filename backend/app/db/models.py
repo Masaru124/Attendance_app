@@ -15,7 +15,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relationships - Note: foreign_keys is required because LeaveRequest has two FKs to User
+    
     leave_requests = relationship("LeaveRequest", back_populates="student", foreign_keys="[LeaveRequest.student_id]")
     fcm_tokens = relationship("FCMToken", back_populates="user")
     attendance_records = relationship("AttendanceRecord", back_populates="student")

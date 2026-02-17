@@ -43,9 +43,6 @@ def startup_event():
     init_db()
     print("Database tables created successfully!")
 
-
-
-
 try:
     cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)

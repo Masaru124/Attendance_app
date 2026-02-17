@@ -1,16 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'providers/auth_provider.dart';
-import 'providers/leave_provider.dart';
-import 'providers/home_tab_controller.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await dotenv.load(fileName: ".env");
+
+  if (kIsWeb) {
+    try {
+      await Firebase.initializeApp(
+        options: FirebaseOptions(
+          apiKey: dotenv.env['FIREBASE_API_KEY'] ?? '',
+          authDomain: dotenv.env['FIREBASE_AUTH_DOMAIN'] ?? '',
+          databaseURL: dotenv.env['FIREBASE_DATABASE_URL'] ?? '',
+          projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? '',
+          storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? '',
+          messagingSenderId: dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '',
+          appId: dotenv.env['FIREBASE_APP_ID'] ?? '',
+          measurementId: dotenv.env['FIREBASE_MEASUREMENT_ID'],
+        ),
+      );
+    } catch (e) {
+      print('Firebase web initialization: $e');
+    }
+  } else {
+    // For mobile platforms
+    await Firebase.initializeApp();
+  }
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

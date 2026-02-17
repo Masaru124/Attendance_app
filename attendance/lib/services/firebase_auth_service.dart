@@ -1,10 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user.dart';
 
 class FirebaseAuthService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser {
     final firebaseUser = _auth.currentUser;
@@ -75,39 +73,7 @@ class FirebaseAuthService {
     }
   }
 
-  Future<User> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        throw AuthException('Google sign-in was cancelled', 'cancelled');
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final oauthCredential = firebase_auth.GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final firebase_auth.UserCredential userCredential = await _auth
-          .signInWithCredential(oauthCredential);
-
-      return User(
-        id: userCredential.user!.uid,
-        email: userCredential.user!.email ?? '',
-        name: userCredential.user!.displayName ?? googleUser.displayName ?? '',
-        role: UserRole.student,
-      );
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    } catch (e) {
-      if (e.toString().contains('cancelled')) rethrow;
-      throw AuthException('Google sign-in failed: $e', 'google_error');
-    }
-  }
-
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
