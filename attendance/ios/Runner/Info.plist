@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Location permissions for iOS -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs location access to mark attendance with GPS verification</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs location access to mark attendance with GPS verification even when the app is in background</string>
 </dict>
 </plist>

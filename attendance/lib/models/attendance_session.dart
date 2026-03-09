@@ -3,6 +3,8 @@ class AttendanceSession {
   final int id;
   final String sessionName;
   final String? location;
+  final int? radiusMeters;
+  final DateTime? lateUntil;
   final String createdAt;
   final bool isClosed;
   final int totalRecords;
@@ -12,6 +14,8 @@ class AttendanceSession {
     required this.id,
     required this.sessionName,
     this.location,
+    this.radiusMeters,
+    this.lateUntil,
     required this.createdAt,
     required this.isClosed,
     this.totalRecords = 0,
@@ -25,6 +29,10 @@ class AttendanceSession {
       id: sessionId,
       sessionName: json['session_name'] ?? '',
       location: json['location'],
+      radiusMeters: json['radius_meters'],
+      lateUntil: json['late_until'] != null
+          ? DateTime.parse(json['late_until'])
+          : null,
       createdAt: json['created_at'] ?? '',
       isClosed: json['is_closed'] ?? false,
       totalRecords: json['total_records'] ?? 0,
@@ -37,6 +45,8 @@ class AttendanceSession {
       'id': id,
       'session_name': sessionName,
       'location': location,
+      'radius_meters': radiusMeters,
+      'late_until': lateUntil?.toIso8601String(),
       'created_at': createdAt,
       'is_closed': isClosed,
       'total_records': totalRecords,
@@ -48,11 +58,15 @@ class AttendanceSession {
   factory AttendanceSession.create({
     required String sessionName,
     String? location,
+    int? radiusMeters,
+    DateTime? lateUntil,
   }) {
     return AttendanceSession(
       id: 0,
       sessionName: sessionName,
       location: location,
+      radiusMeters: radiusMeters,
+      lateUntil: lateUntil,
       createdAt: DateTime.now().toIso8601String(),
       isClosed: false,
       totalRecords: 0,

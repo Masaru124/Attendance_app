@@ -148,12 +148,20 @@ class _AttendanceHistoryScreenState
   }
 
   List<AttendanceRecord> get _filteredRecords {
+    List<AttendanceRecord> records;
+
     if (_selectedFilter == 'ALL') {
-      return _attendanceRecords;
+      records = _attendanceRecords;
+    } else {
+      records = _attendanceRecords
+          .where((r) => r.status.toUpperCase() == _selectedFilter)
+          .toList();
     }
-    return _attendanceRecords
-        .where((r) => r.status.toUpperCase() == _selectedFilter)
-        .toList();
+
+    // Sort by date in descending order (most recent first)
+    records.sort((a, b) => b.date.compareTo(a.date));
+
+    return records;
   }
 
   void _showFilterSheet() {

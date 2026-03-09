@@ -29,13 +29,12 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(leave_router)
 app.include_router(notification_router)
-app.include_router(users_router)
+app.include_router(users_router, prefix="/users")
 app.include_router(attendance_router)
 
 @app.get("/")
 def root():
     return {"message": "Smart Attendance Backend Running"}
-
 
 @app.on_event("startup")
 def startup_event():
@@ -48,12 +47,3 @@ try:
     firebase_admin.initialize_app(cred)
 except Exception as e:
     print(f"Firebase initialization warning: {e}")
-
-def get_current_user(authorization: str = Header(...)):
-    try:
-        token = authorization.split(" ")[1]
-        decoded_token = auth.verify_id_token(token)
-        return decoded_token
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid or missing token: {str(e)}")
-

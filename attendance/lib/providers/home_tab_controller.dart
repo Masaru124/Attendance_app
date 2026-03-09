@@ -6,7 +6,8 @@ class HomeTabController extends ChangeNotifier {
   int get currentIndex => _currentIndex;
 
   void setIndex(int index) {
-    if (index >= 0 && index < 5) {
+    if (index >= 0 && index < 6) {
+      // Updated to support index 5 for students
       _currentIndex = index;
       notifyListeners();
     }

@@ -111,13 +111,19 @@ class AuthProvider extends ChangeNotifier {
           email: _currentUser?.email ?? '',
           name: _currentUser?.name ?? userProfile.name,
           role: userProfile.role,
+          faceRegistered: userProfile.faceRegistered,
         );
         notifyListeners();
         print('Synced user role from backend: ${userProfile.role}');
+        print('Face registered status: ${userProfile.faceRegistered}');
       }
     } catch (e) {
       print('Failed to sync user role from backend: $e');
     }
+  }
+
+  Future<void> refreshUserProfile() async {
+    await _syncUserRoleFromBackend();
   }
 
   Future<void> createUserWithEmailAndPassword(
@@ -202,6 +208,6 @@ class AuthProvider extends ChangeNotifier {
   }
 }
 
-final authProviderProvider = ChangeNotifierProvider<AuthProvider>((ref) {
-  return AuthProvider();
-});
+final authProviderProvider = ChangeNotifierProvider<AuthProvider>(
+  (ref) => AuthProvider(),
+);

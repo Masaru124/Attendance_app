@@ -832,4 +832,198 @@ class ApiService {
       return false;
     }
   }
+
+  // ============== Biometric Attendance APIs ==============
+
+  Future<Map<String, dynamic>> markBiometricAttendance({
+    required String qrToken,
+    required String imageBase64,
+    required double latitude,
+    required double longitude,
+  }) async {
+    await _getValidToken();
+
+    // Debug user info during attendance
+    print('=== BIOMETRIC ATTENDANCE DEBUG ===');
+    final currentUser = authProvider?.currentUser;
+    print('Current user during attendance: $currentUser');
+    print('User ID: ${currentUser?.id}');
+    print('User email: ${currentUser?.email}');
+    print(
+      'Token during attendance: ${authProvider?.token?.substring(0, 50)}...',
+    );
+
+    // Debug: Print first 100 characters of base64 to verify format
+    print(
+      'Sending image base64 (first 100 chars): ${imageBase64.substring(0, imageBase64.length > 100 ? 100 : imageBase64.length)}',
+    );
+    print('Base64 length: ${imageBase64.length}');
+    print('QR Token: $qrToken');
+    print('Latitude: $latitude');
+    print('Longitude: $longitude');
+
+    // Ensure base64 doesn't have data URL prefix
+    String cleanBase64 = imageBase64;
+    if (cleanBase64.contains(',')) {
+      cleanBase64 = cleanBase64.split(',')[1];
+      print('Removed data URL prefix from base64');
+    }
+
+    final requestData = {
+      'qr_token': qrToken,
+      'image_base64': cleanBase64,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+
+    print('Request data: $requestData');
+    print('Request data keys: ${requestData.keys}');
+    print(
+      'Image base64 first 50: ${(requestData['image_base64'] as String).substring(0, 50)}',
+    );
+    print(
+      'Image base64 length: ${(requestData['image_base64'] as String).length}',
+    );
+
+    // Also log the raw image data for comparison
+    print('QR Token type: ${qrToken.runtimeType}');
+    print('Latitude type: ${latitude.runtimeType}');
+    print('Longitude type: ${longitude.runtimeType}');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/attendance/verify-biometric'),
+      headers: headers,
+      body: jsonEncode(requestData),
+    );
+
+    if (response.statusCode == 401) {
+      print('Received 401, refreshing token and retrying...');
+      final newToken = await authProvider?.refreshToken();
+
+      if (newToken != null) {
+        print('Token refreshed successfully, retrying request...');
+        final freshHeaders = {'Content-Type': 'application/json'};
+        freshHeaders['Authorization'] = 'Bearer $newToken';
+
+        final retryResponse = await http.post(
+          Uri.parse('$baseUrl/attendance/verify-biometric'),
+          headers: freshHeaders,
+          body: jsonEncode(requestData),
+        );
+
+        if (retryResponse.statusCode == 200) {
+          final data = jsonDecode(retryResponse.body);
+          return data;
+        } else {
+          throw Exception(
+            'Failed to mark biometric attendance after refresh: ${retryResponse.body}',
+          );
+        }
+      }
+    }
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else if (response.statusCode == 400) {
+      // Parse 400 error for better debugging
+      try {
+        final errorData = jsonDecode(response.body);
+        print('400 Bad Request details: $errorData');
+        throw Exception('Bad Request: ${errorData['detail'] ?? response.body}');
+      } catch (e) {
+        print('Failed to parse 400 error: $e');
+        throw Exception('Bad Request: ${response.body}');
+      }
+    } else {
+      throw Exception('Failed to mark biometric attendance: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> registerFace(String imageBase64) async {
+    await _getValidToken();
+
+    // Debug user info during registration
+    print('=== FACE REGISTRATION DEBUG ===');
+    final currentUser = authProvider?.currentUser;
+    print('Current user during registration: $currentUser');
+    print('User ID: ${currentUser?.id}');
+    print('User email: ${currentUser?.email}');
+    print(
+      'Token during registration: ${authProvider?.token?.substring(0, 50)}...',
+    );
+
+    // Debug: Print first 100 characters of base64 to verify format
+    print(
+      'Registering face - base64 (first 100 chars): ${imageBase64.substring(0, imageBase64.length > 100 ? 100 : imageBase64.length)}',
+    );
+    print('Registration base64 length: ${imageBase64.length}');
+
+    // Ensure base64 doesn't have data URL prefix
+    String cleanBase64 = imageBase64;
+    if (cleanBase64.contains(',')) {
+      cleanBase64 = cleanBase64.split(',')[1];
+      print('Removed data URL prefix from registration base64');
+    }
+
+    final registrationRequestData = {'image_base64': cleanBase64};
+    print('Registration request data: $registrationRequestData');
+    print(
+      'Registration image base64 first 50: ${(registrationRequestData['image_base64'] as String).substring(0, 50)}',
+    );
+    print(
+      'Registration image base64 length: ${(registrationRequestData['image_base64'] as String).length}',
+    );
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/register-face'),
+      headers: headers,
+      body: jsonEncode(registrationRequestData),
+    );
+
+    if (response.statusCode == 401) {
+      print('Received 401, refreshing token and retrying...');
+      final newToken = await authProvider?.refreshToken();
+
+      if (newToken != null) {
+        print('Token refreshed successfully, retrying request...');
+        final freshHeaders = {'Content-Type': 'application/json'};
+        freshHeaders['Authorization'] = 'Bearer $newToken';
+
+        final retryResponse = await http.post(
+          Uri.parse('$baseUrl/users/register-face'),
+          headers: freshHeaders,
+          body: jsonEncode({'image_base64': cleanBase64}),
+        );
+
+        if (retryResponse.statusCode == 200) {
+          final data = jsonDecode(retryResponse.body);
+          return data;
+        } else {
+          throw Exception(
+            'Failed to register face after refresh: ${retryResponse.body}',
+          );
+        }
+      }
+    }
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else if (response.statusCode == 400) {
+      // Parse 400 error for better debugging
+      try {
+        final errorData = jsonDecode(response.body);
+        print('Registration 400 Bad Request details: $errorData');
+        throw Exception(
+          'Registration Bad Request: ${errorData['detail'] ?? response.body}',
+        );
+      } catch (e) {
+        print('Failed to parse registration 400 error: $e');
+        throw Exception('Registration Bad Request: ${response.body}');
+      }
+    } else {
+      throw Exception('Failed to register face: ${response.body}');
+    }
+  }
 }

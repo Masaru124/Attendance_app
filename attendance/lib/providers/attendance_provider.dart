@@ -79,6 +79,8 @@ class AttendanceProvider extends ChangeNotifier {
   Future<AttendanceSession?> createSession({
     required String sessionName,
     String? location,
+    int? radiusMeters,
+    DateTime? lateUntil,
   }) async {
     if (authProvider == null) return null;
 
@@ -95,10 +97,23 @@ class AttendanceProvider extends ChangeNotifier {
       final requestHeaders = {..._headers};
       requestHeaders['Authorization'] = 'Bearer $token';
 
+      final requestBody = {'session_name': sessionName};
+      if (location != null) {
+        requestBody['location'] = location;
+      }
+      if (radiusMeters != null) {
+        requestBody['radius_meters'] = radiusMeters.toString();
+      }
+      if (lateUntil != null) {
+        // Convert to time format for the new API
+        requestBody['late_until_time'] =
+            '${lateUntil.hour.toString().padLeft(2, '0')}:${lateUntil.minute.toString().padLeft(2, '0')}:00';
+      }
+
       final response = await http.post(
         Uri.parse('${ApiService.baseUrl}/attendance/sessions'),
         headers: requestHeaders,
-        body: jsonEncode({'session_name': sessionName, 'location': location}),
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {

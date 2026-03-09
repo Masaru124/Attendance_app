@@ -11,6 +11,8 @@ import 'attendance_history_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'admin_screen.dart';
 import 'attendance_sessions_screen.dart';
+import 'teacher_sessions_screen.dart';
+import 'face_registration_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -26,13 +28,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     const LeaveHistoryScreen(),
     const QrScannerScreen(),
     const AttendanceHistoryScreen(),
+    FaceRegistrationScreen(),
   ];
 
   final List<Widget> _teacherPages = [
     const DashboardScreen(),
     const LeaveApprovalScreen(),
     const LeaveHistoryScreen(),
-    const AttendanceSessionsScreen(),
+    const TeacherSessionsScreen(),
+    FaceRegistrationScreen(),
   ];
 
   final List<Widget> _adminPages = [
@@ -40,6 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     const LeaveApprovalScreen(),
     const LeaveHistoryScreen(),
     const AttendanceSessionsScreen(),
+    FaceRegistrationScreen(),
   ];
 
   final List<String> _studentTitles = [
@@ -48,18 +53,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     'My History',
     'Scan QR',
     'Attendance',
+    'Register Face',
   ];
   final List<String> _teacherTitles = [
     'Dashboard',
     'Pending Requests',
     'Leave History',
     'Sessions',
+    'Register Face',
   ];
   final List<String> _adminTitles = [
     'Admin Panel',
     'Pending Requests',
     'Leave History',
     'Sessions',
+    'Register Face',
   ];
 
   List<Widget> get _pages {
@@ -67,11 +75,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = authProvider.currentUser;
 
     if (user?.role == UserRole.admin) {
-      return _adminPages;
+      return _getFilteredPages(_adminPages, user);
     } else if (user?.role == UserRole.teacher) {
-      return _teacherPages;
+      return _getFilteredPages(_teacherPages, user);
     } else {
-      return _studentPages;
+      return _getFilteredPages(_studentPages, user);
     }
   }
 
@@ -80,12 +88,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = authProvider.currentUser;
 
     if (user?.role == UserRole.admin) {
-      return _adminTitles;
+      return _getFilteredTitles(_adminTitles, user);
     } else if (user?.role == UserRole.teacher) {
-      return _teacherTitles;
+      return _getFilteredTitles(_teacherTitles, user);
     } else {
-      return _studentTitles;
+      return _getFilteredTitles(_studentTitles, user);
     }
+  }
+
+  List<String> _getFilteredTitles(List<String> originalTitles, user) {
+    // Remove 'Register Face' if user has already registered their face
+    if (user?.faceRegistered == true) {
+      return originalTitles.where((title) => title != 'Register Face').toList();
+    }
+    return originalTitles;
+  }
+
+  List<Widget> _getFilteredPages(List<Widget> originalPages, user) {
+    // Remove FaceRegistrationScreen if user has already registered their face
+    if (user?.faceRegistered == true) {
+      return originalPages
+          .where((page) => page.runtimeType != FaceRegistrationScreen)
+          .toList();
+    }
+    return originalPages;
   }
 
   @override
@@ -100,6 +126,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final currentIndex = tabController.currentIndex < pages.length
         ? tabController.currentIndex
         : 0;
+
+    print('=== HomeScreen Build ===');
+    print('Current index: ${tabController.currentIndex}');
+    print('Clamped index: $currentIndex');
+    print('User role: ${user?.role}');
+    print('Pages length: ${pages.length}');
+    print('Current page type: ${pages[currentIndex].runtimeType}');
 
     return Scaffold(
       appBar: AppBar(
@@ -117,6 +150,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: (index) {
+          print('=== Bottom Navigation Tapped ===');
+          print('Index clicked: $index');
+          print('Total pages available: ${pages.length}');
+          print('Current user role: ${user?.role}');
+          print('Page at index: ${pages[index].runtimeType}');
           ref.read(homeTabControllerProvider).setIndex(index);
         },
         type: BottomNavigationBarType.fixed,
@@ -134,9 +172,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   IconData _getIconForIndex(int index, user) {
     final isAdmin = user?.role == UserRole.admin;
     final isTeacher = user?.role == UserRole.teacher;
+    final hasFaceRegistered = user?.faceRegistered == true;
 
     if (isAdmin || isTeacher) {
-      switch (index) {
+      // Adjust indices based on whether Register Face is filtered out
+      final adjustedIndex = hasFaceRegistered && index >= 4 ? index + 1 : index;
+      switch (adjustedIndex) {
         case 0:
           return isAdmin ? Icons.admin_panel_settings : Icons.dashboard;
         case 1:
@@ -144,12 +185,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         case 2:
           return Icons.history;
         case 3:
+          return Icons.event_note;
+        case 4:
+          return Icons.face;
+        case 5:
           return Icons.qr_code_2;
         default:
           return Icons.home;
       }
     } else {
-      switch (index) {
+      // Adjust indices based on whether Register Face is filtered out
+      final adjustedIndex = hasFaceRegistered && index >= 5 ? index + 1 : index;
+      switch (adjustedIndex) {
         case 0:
           return Icons.dashboard;
         case 1:
@@ -160,6 +207,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           return Icons.qr_code_scanner;
         case 4:
           return Icons.check_circle;
+        case 5:
+          return Icons.face;
         default:
           return Icons.home;
       }

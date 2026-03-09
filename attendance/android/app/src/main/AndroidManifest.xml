@@ -2,9 +2,16 @@
     <!-- Camera permission for QR scanning -->
     <uses-permission android:name="android.permission.CAMERA" />
     
+    <!-- Location permissions for GPS -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    
     <!-- Specify that camera feature is optional -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
     
     <application
         android:label="attendance"
@@ -51,6 +58,12 @@
         <!-- Required for permission_handler on Android 11+ -->
         <intent>
             <action android:name="android.permission.CAMERA" />
+        </intent>
+        <intent>
+            <action android:name="android.permission.ACCESS_FINE_LOCATION" />
+        </intent>
+        <intent>
+            <action android:name="android.permission.ACCESS_COARSE_LOCATION" />
         </intent>
     </queries>
 </manifest>

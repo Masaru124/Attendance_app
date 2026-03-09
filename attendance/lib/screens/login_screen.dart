@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../services/location_service.dart';
+import '../config/location_config.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -36,10 +38,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authProvider = ref.read(authProviderProvider);
+
+      // First, authenticate the user
       await authProvider.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
+
+      // Check if user is a student and validate location
+      final user = authProvider.currentUser;
+      if (user?.isStudent == true && LocationConfig.enforceLocationCheck) {
+        final locationService = LocationService();
+
+        // Check if user is within allowed location
+        final isWithinAllowedLocation = await locationService
+            .isWithinAllowedLocation();
+
+        if (!isWithinAllowedLocation) {
+          // Get detailed location status message
+          final locationMessage = await locationService
+              .getLocationStatusMessage();
+
+          // Sign out the user since location validation failed
+          await authProvider.signOut();
+
+          setState(() {
+            _errorMessage = 'Location access denied: $locationMessage';
+          });
+          return;
+        }
+      }
 
       if (mounted) {
         Navigator.pushReplacement(

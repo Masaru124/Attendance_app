@@ -5,12 +5,14 @@ class User {
   final String email;
   final String name;
   final UserRole role;
+  final bool faceRegistered;
 
   User({
     required this.id,
     required this.email,
     required this.name,
     required this.role,
+    this.faceRegistered = false,
   });
 
   bool get isStudent => role == UserRole.student;
@@ -36,6 +38,7 @@ class User {
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       role: role,
+      faceRegistered: json['face_registered'] ?? false,
     );
   }
 
@@ -44,5 +47,6 @@ class User {
     'email': email,
     'name': name,
     'role': role.toString().split('.').last.toUpperCase(),
+    'face_registered': faceRegistered,
   };
 }

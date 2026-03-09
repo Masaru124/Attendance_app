@@ -12,6 +12,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
     role = Column(String(50), default="STUDENT")  # STUDENT, TEACHER, ADMIN
+    face_embedding = Column(Text, nullable=True)  # Store face recognition embedding as JSON string
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -61,6 +62,8 @@ class AttendanceSession(Base):
     session_name = Column(String(255), nullable=False)
     created_by = Column(String(128), nullable=False)  # Firebase UID
     location = Column(String(255), nullable=True)
+    radius_meters = Column(Integer, nullable=True)  # GPS validation radius in meters
+    late_until = Column(DateTime(timezone=True), nullable=True)  # Deadline for marking attendance
     is_closed = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -78,6 +81,9 @@ class AttendanceRecord(Base):
     status = Column(String(50), default="PRESENT")  # PRESENT, ABSENT, LATE, EXCUSED
     check_in_time = Column(String(20), nullable=True)
     check_out_time = Column(String(20), nullable=True)
+    latitude = Column(String(50), nullable=True)  # GPS latitude when marking attendance
+    longitude = Column(String(50), nullable=True)  # GPS longitude when marking attendance
+    face_verified = Column(Boolean, default=False)  # Whether face verification was completed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
